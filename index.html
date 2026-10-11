@@ -10,7 +10,7 @@
 :root{--purple:#7565e8;--bg:#f7f6ff;--ink:#27243b;--muted:#77738d}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,sans-serif}
-header{background:var(--purple);color:white;padding:24px 20px 20px;border-radius:0 0 26px 26px}
+header{background:linear-gradient(135deg,#7565e8,#9c70ed);color:white;padding:24px 20px 20px;border-radius:0 0 26px 26px}
 header h1{margin:0;font-size:28px}header p{margin:7px 0 0;opacity:.9}
 main{max-width:620px;margin:auto;padding:18px 15px 40px}
 nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 15px}
@@ -32,13 +32,23 @@ label{font-size:14px;font-weight:600}
 hr{border:0;border-top:1px solid #eeeaf7;margin:18px 0}
 .hidden{display:none!important}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
+.game-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.game-box{background:#f7f4ff;border-radius:16px;padding:14px;text-align:center}
+.game-number{font-size:29px;font-weight:800;color:var(--purple)}
+.xp-track{height:9px;background:#eae5ff;border-radius:20px;overflow:hidden;margin:10px 0}
+.xp-fill{height:100%;background:linear-gradient(90deg,#7565e8,#b06bea);border-radius:20px;transition:width .25s}
+.week{display:flex;justify-content:space-between;gap:5px;margin-top:12px}
+.day{text-align:center;flex:1;font-size:11px;color:var(--muted)}
+.day-dot{width:30px;height:30px;border-radius:50%;background:#f0edff;margin:5px auto;display:flex;align-items:center;justify-content:center;font-size:14px}
+.day-dot.done{background:#ffe1b9}
 </style>
 </head>
 <body>
 <header>
   <h1>✦ StudyPlay</h1>
-  <p>Учись в своём ритме</p>
+  <p>Учись в своём ритме ✨</p>
 </header>
+
 <main>
   <nav>
     <button class="active" data-tab="cards">Карточки</button>
@@ -46,6 +56,35 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
     <button data-tab="match">Пары</button>
     <button data-tab="create">Мои слова</button>
   </nav>
+
+  <div class="panel" id="gamePanel">
+    <h2>⚡ Твой прогресс</h2>
+    <div class="game-grid">
+      <div class="game-box">
+        <div class="game-number" id="xp">0</div>
+        <div class="muted">очков XP</div>
+      </div>
+      <div class="game-box">
+        <div class="game-number" id="level">1</div>
+        <div class="muted">🏆 уровень</div>
+      </div>
+      <div class="game-box">
+        <div class="game-number" id="streak">0 🔥</div>
+        <div class="muted">дней подряд</div>
+      </div>
+      <div class="game-box">
+        <div class="game-number" id="record">0</div>
+        <div class="muted">рекорд серии</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:8px;margin-top:16px">
+      <strong id="levelLabel">Уровень 1</strong>
+      <small id="xpLabel">0 / 100 XP</small>
+    </div>
+    <div class="xp-track"><div class="xp-fill" id="xpBar" style="width:0%"></div></div>
+    <p class="muted" id="streakMessage">Начни заниматься сегодня, чтобы открыть свою серию!</p>
+    <div class="week" id="week"></div>
+  </div>
 
   <section id="cards" class="panel">
     <h2 id="deckTitle">Английский — основы</h2>
@@ -58,7 +97,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
     </div>
     <div class="actions">
       <button class="secondary" id="shuffle">🔀 Перемешать</button>
-      <button class="secondary" id="known">✓ Знаю</button>
+      <button class="secondary" id="known">✓ Знаю · +2 XP</button>
     </div>
   </section>
 
@@ -99,106 +138,344 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
   </section>
 
   <section class="panel">
-    <h2>Твой прогресс</h2>
+    <h2>Статистика карточек</h2>
     <div class="stat">
       <div><strong id="total">0</strong><small>карточек</small></div>
       <div><strong id="learned">0</strong><small>знаю</small></div>
       <div><strong id="percent">0%</strong><small>изучено</small></div>
     </div>
   </section>
-  <footer>StudyPlay · Твои карточки сохраняются в этом браузере на устройстве.</footer>
+  <footer>StudyPlay · Карточки и прогресс хранятся в этом браузере на устройстве.</footer>
 </main>
+
 <script>
 const starter=[
  ["Hello","Привет"],["Thank you","Спасибо"],["Book","Книга"],
  ["Apple","Яблоко"],["Water","Вода"],["Beautiful","Красивый"],
  ["House","Дом"],["Friend","Друг"]
 ];
+
+// Важно: используем прежний ключ карточек, чтобы сохранить твой набор.
 let data;
-try{data=JSON.parse(localStorage.getItem("studyplay-cards"))||starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}))}
-catch(e){data=starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}))}
-let index=0,flipped=false,order=[],qi=0,score=0,answered=false,selected=null,matched=new Set();
+try{
+ const stored=localStorage.getItem("studyplay-cards");
+ data=stored?JSON.parse(stored):starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}));
+ if(!Array.isArray(data))throw new Error("Invalid cards");
+}catch(e){
+ data=starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}));
+}
+
+function todayKey(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function yesterdayKey(){
+ const d=new Date();
+ d.setDate(d.getDate()-1);
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+// XP хранится отдельно от карточек.
+const GAME_KEY="studyplay-gamification";
+function freshGame(){
+ return {xp:0,streak:0,best:0,lastDay:"",activityDays:[]};
+}
+let game;
+try{
+ const saved=JSON.parse(localStorage.getItem(GAME_KEY));
+ game=saved&&typeof saved==="object"?{...freshGame(),...saved}:freshGame();
+ if(!Array.isArray(game.activityDays))game.activityDays=[];
+ if(!Number.isFinite(game.xp)||game.xp<0)game.xp=0;
+ if(!Number.isFinite(game.streak)||game.streak<0)game.streak=0;
+ if(!Number.isFinite(game.best)||game.best<0)game.best=0;
+}catch(e){game=freshGame()}
+
+let index=0,flipped=false,qi=0,score=0,answered=false,selected=null,matched=new Set();
+
 const $=id=>document.getElementById(id);
 function save(){try{localStorage.setItem("studyplay-cards",JSON.stringify(data))}catch(e){}}
+function saveGame(){try{localStorage.setItem(GAME_KEY,JSON.stringify(game))}catch(e){}}
 function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
-function stats(){$("total").textContent=data.length;$("learned").textContent=data.filter(x=>x.known).length;$("percent").textContent=data.length?Math.round(data.filter(x=>x.known).length/data.length*100)+"%":"0%"}
+
+function recordActivity(){
+ const today=todayKey();
+ if(game.lastDay!==today){
+   if(game.lastDay===yesterdayKey())game.streak++;
+   else game.streak=1;
+   game.lastDay=today;
+   game.best=Math.max(game.best,game.streak);
+ }
+ if(!game.activityDays.includes(today))game.activityDays.push(today);
+ // Keep a manageable history of recent activity days.
+ game.activityDays=game.activityDays.slice(-90);
+ saveGame();
+}
+
+function awardXP(amount){
+ recordActivity();
+ game.xp+=amount;
+ saveGame();
+ renderGame();
+}
+
+function renderGame(){
+ const xp=Math.floor(game.xp);
+ const level=Math.floor(xp/100)+1;
+ const intoLevel=xp%100;
+ $("xp").textContent=xp;
+ $("level").textContent=level;
+ $("streak").textContent=game.lastDay===todayKey()?game.streak+" 🔥":game.streak+" 🔥";
+ $("record").textContent=game.best;
+ $("levelLabel").textContent="🏆 Уровень "+level;
+ $("xpLabel").textContent=intoLevel+" / 100 XP";
+ $("xpBar").style.width=intoLevel+"%";
+
+ if(game.lastDay===todayKey()){
+   $("streakMessage").textContent="Ты уже занималась сегодня — молодец! Продолжай в своём ритме 💜";
+ }else if(game.lastDay===yesterdayKey()){
+   $("streakMessage").textContent="Займись сегодня, чтобы продолжить серию 🔥";
+ }else{
+   $("streakMessage").textContent="Начни заниматься сегодня, чтобы открыть новую серию!";
+ }
+
+ const days=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+ const now=new Date();
+ const mondayOffset=(now.getDay()+6)%7;
+ const monday=new Date(now);
+ monday.setDate(now.getDate()-mondayOffset);
+ $("week").innerHTML="";
+ for(let i=0;i<7;i++){
+   const d=new Date(monday);
+   d.setDate(monday.getDate()+i);
+   const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+   const item=document.createElement("div");
+   item.className="day";
+   const dot=document.createElement("div");
+   dot.className="day-dot"+(game.activityDays.includes(key)?" done":"");
+   dot.textContent=game.activityDays.includes(key)?"✓":"·";
+   const label=document.createElement("div");
+   label.textContent=days[d.getDay()];
+   item.append(dot,label);
+   $("week").appendChild(item);
+ }
+}
+
+function stats(){
+ $("total").textContent=data.length;
+ $("learned").textContent=data.filter(x=>x.known).length;
+ $("percent").textContent=data.length?Math.round(data.filter(x=>x.known).length/data.length*100)+"%":"0%";
+}
+
 function renderCard(){
- if(!data.length){$("flash").textContent="Добавь свою первую карточку";$("counter").textContent="0 карточек";return}
+ if(!data.length){
+   $("flash").textContent="Добавь свою первую карточку";
+   $("counter").textContent="0 карточек";
+   $("known").textContent="✓ Знаю · +2 XP";
+   stats();
+   return;
+ }
  index=(index+data.length)%data.length;
  $("deckTitle").textContent="Мой набор";
  $("counter").textContent=`Карточка ${index+1} из ${data.length}`;
  $("flash").textContent=flipped?data[index].def:data[index].term;
- $("known").textContent=data[index].known?"✓ Уже знаю":"✓ Знаю";
- stats()
+ $("known").textContent=data[index].known?"✓ Уже знаю":"✓ Знаю · +2 XP";
+ stats();
 }
+
 function tab(name){
  document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
  $(name).classList.remove("hidden");
  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
- if(name==="cards")renderCard();if(name==="learn")question();if(name==="match")newMatch();if(name==="create")renderList()
+ if(name==="cards")renderCard();
+ if(name==="learn")question();
+ if(name==="match")newMatch();
+ if(name==="create")renderList();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
-$("flash").onclick=$("flip").onclick=()=>{flipped=!flipped;renderCard()};
-$("flash").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();flipped=!flipped;renderCard()}};
+$("flash").onclick=$("flip").onclick=()=>{
+ flipped=!flipped;
+ renderCard();
+};
+$("flash").onkeydown=e=>{
+ if(e.key==="Enter"||e.key===" "){
+   e.preventDefault();flipped=!flipped;renderCard();
+ }
+};
 $("prev").onclick=()=>{index--;flipped=false;renderCard()};
 $("next").onclick=()=>{index++;flipped=false;renderCard()};
 $("shuffle").onclick=()=>{data=shuffle(data);index=0;flipped=false;save();renderCard()};
-$("known").onclick=()=>{if(data[index]){data[index].known=!data[index].known;save();renderCard()}};
+
+$("known").onclick=()=>{
+ if(!data[index])return;
+ if(!data[index].known){
+   data[index].known=true;
+   save();
+   awardXP(2);
+ }else{
+   $("addFeedback").textContent="Эта карточка уже отмечена как знакомая.";
+ }
+ renderCard();
+};
+
 function question(){
- if(!data.length){$("question").textContent="Сначала добавь карточки.";return}
- qi=Math.floor(Math.random()*data.length);answered=false;
+ if(!data.length){
+   $("question").textContent="Сначала добавь карточки.";
+   $("options").innerHTML="";
+   return;
+ }
+ qi=Math.floor(Math.random()*data.length);
+ answered=false;
  $("question").textContent="Как переводится: "+data[qi].term+"?";
- $("feedback").textContent="";$("options").innerHTML="";
+ $("feedback").textContent="";
+ $("options").innerHTML="";
  let choices=shuffle([data[qi],...shuffle(data.filter((_,i)=>i!==qi)).slice(0,3)]);
- choices.forEach(c=>{let b=document.createElement("button");b.className="option";b.textContent=c.def;b.onclick=()=>{
- if(answered)return;answered=true;
- if(c.id===data[qi].id){score++;data[qi].known=true;$("feedback").textContent="Верно! 🎉";b.classList.add("correct");save()}
- else{$("feedback").textContent="Правильный ответ: "+data[qi].def;b.classList.add("wrong")}
- [...$("options").children].forEach(x=>x.disabled=true);$("score").textContent="Верных ответов: "+score;stats()
- };$("options").appendChild(b)});
- if(choices.length===1)$("feedback").textContent="Добавь ещё карточки для разнообразия."
+ choices.forEach(c=>{
+   let b=document.createElement("button");
+   b.className="option";
+   b.textContent=c.def;
+   b.onclick=()=>{
+     if(answered)return;
+     answered=true;
+     if(c.id===data[qi].id){
+       score++;
+       data[qi].known=true;
+       $("feedback").textContent="Верно! 🎉 +10 XP";
+       b.classList.add("correct");
+       save();
+       awardXP(10);
+     }else{
+       $("feedback").textContent="Правильный ответ: "+data[qi].def;
+       b.classList.add("wrong");
+     }
+     [...$("options").children].forEach(x=>x.disabled=true);
+     $("score").textContent="Верных ответов: "+score;
+     stats();
+   };
+   $("options").appendChild(b);
+ });
+ if(choices.length===1)$("feedback").textContent="Добавь ещё карточки для разнообразия.";
 }
 $("nextQuestion").onclick=question;
+
 function newMatch(){
- matched=new Set();selected=null;$("pairs").innerHTML="";$("matchFeedback").textContent="";
- if(data.length<2){$("matchFeedback").textContent="Добавь хотя бы две карточки.";return}
+ matched=new Set();
+ selected=null;
+ $("pairs").innerHTML="";
+ $("matchFeedback").textContent="";
+ if(data.length<2){
+   $("matchFeedback").textContent="Добавь хотя бы две карточки.";
+   return;
+ }
  let chosen=shuffle(data).slice(0,Math.min(6,data.length));
- let tiles=shuffle(chosen.flatMap((c,i)=>[{id:c.id,side:"term",text:c.term},{id:c.id,side:"def",text:c.def}]));
- tiles.forEach((t,i)=>{let b=document.createElement("button");b.className="option";b.style.width="48%";b.style.display="inline-block";b.style.verticalAlign="top";b.style.margin="1%";b.textContent=t.text;b.onclick=()=>{
- if(matched.has(t.id+"-"+t.side))return;
- if(!selected){selected={t,b};b.classList.add("correct");return}
- if(selected.t.id===t.id&&selected.t.side!==t.side){matched.add(t.id+"-term");matched.add(t.id+"-def");b.classList.add("correct");selected.b.disabled=true;b.disabled=true;selected.b.style.opacity=".45";b.style.opacity=".45";selected=null;
- if(matched.size===chosen.length*2)$("matchFeedback").textContent="Все пары найдены! Отличная работа 🎉"
- }else{selected.b.classList.remove("correct");selected=null;$("matchFeedback").textContent="Не совпало — попробуй ещё раз."}
- };$("pairs").appendChild(b)})
+ let tiles=shuffle(chosen.flatMap(c=>[
+   {id:c.id,side:"term",text:c.term},
+   {id:c.id,side:"def",text:c.def}
+ ]));
+ tiles.forEach(t=>{
+   let b=document.createElement("button");
+   b.className="option";
+   b.style.width="48%";
+   b.style.display="inline-block";
+   b.style.verticalAlign="top";
+   b.style.margin="1%";
+   b.textContent=t.text;
+   b.onclick=()=>{
+     if(matched.has(t.id+"-"+t.side))return;
+     if(!selected){
+       selected={t,b};
+       b.classList.add("correct");
+       return;
+     }
+     if(selected.t.id===t.id&&selected.t.side!==t.side){
+       matched.add(t.id+"-term");
+       matched.add(t.id+"-def");
+       b.classList.add("correct");
+       selected.b.disabled=true;
+       b.disabled=true;
+       selected.b.style.opacity=".45";
+       b.style.opacity=".45";
+       selected=null;
+       $("matchFeedback").textContent="Пара найдена! +2 XP";
+       awardXP(2);
+       if(matched.size===chosen.length*2){
+         $("matchFeedback").textContent="Все пары найдены! Отличная работа 🎉";
+       }
+     }else{
+       selected.b.classList.remove("correct");
+       selected=null;
+       $("matchFeedback").textContent="Не совпало — попробуй ещё раз.";
+     }
+   };
+   $("pairs").appendChild(b);
+ });
 }
 $("newMatch").onclick=newMatch;
+
 $("add").onclick=()=>{
  let term=$("term").value.trim(),def=$("definition").value.trim();
- if(!term||!def){$("addFeedback").textContent="Заполни оба поля.";return}
- data.push({id:Date.now()+Math.random(),term,def,known:false});save();
- $("term").value="";$("definition").value="";$("addFeedback").textContent="Карточка добавлена!";
- renderList();stats()
+ if(!term||!def){
+   $("addFeedback").textContent="Заполни оба поля.";
+   return;
+ }
+ data.push({id:Date.now()+Math.random(),term,def,known:false});
+ save();
+ $("term").value="";
+ $("definition").value="";
+ $("addFeedback").textContent="Карточка добавлена!";
+ renderList();stats();
 };
+
 function renderList(){
  $("myCards").innerHTML="";
- data.forEach((c,i)=>{let row=document.createElement("div");row.style.cssText="padding:10px 0;border-bottom:1px solid #eeeaf7";
- let t=document.createElement("strong");t.textContent=c.term+" — ";
- let d=document.createElement("span");d.textContent=c.def+" ";
- let del=document.createElement("button");del.textContent="Удалить";del.className="secondary";del.style.padding="7px 10px";del.onclick=()=>{data.splice(i,1);index=0;save();renderList();renderCard();stats()};
- row.append(t,d,del);$("myCards").appendChild(row)
- })
+ data.forEach((c,i)=>{
+   let row=document.createElement("div");
+   row.style.cssText="padding:10px 0;border-bottom:1px solid #eeeaf7";
+   let t=document.createElement("strong");
+   t.textContent=c.term+" — ";
+   let d=document.createElement("span");
+   d.textContent=c.def+" ";
+   let del=document.createElement("button");
+   del.textContent="Удалить";
+   del.className="secondary";
+   del.style.padding="7px 10px";
+   del.onclick=()=>{
+     data.splice(i,1);
+     index=0;
+     save();
+     renderList();renderCard();stats();
+   };
+   row.append(t,d,del);
+   $("myCards").appendChild(row);
+ });
 }
+
 $("export").onclick=()=>{
  let blob=new Blob([data.map(c=>c.term+";"+c.def).join("\n")],{type:"text/plain;charset=utf-8"});
- let url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="studyplay-cards.txt";a.click();URL.revokeObjectURL(url)
+ let url=URL.createObjectURL(blob);
+ let a=document.createElement("a");
+ a.href=url;a.download="studyplay-cards.txt";a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+
 $("import").onclick=()=>{
  let lines=$("importText").value.split(/\r?\n/),added=0;
- lines.forEach(line=>{let p=line.split(";");if(p.length>=2&&p[0].trim()&&p.slice(1).join(";").trim()){data.push({id:Date.now()+Math.random(),term:p[0].trim(),def:p.slice(1).join(";").trim(),known:false});added++}});
- save();$("importText").value="";$("addFeedback").textContent="Импортировано карточек: "+added;renderList();renderCard();stats()
+ lines.forEach(line=>{
+   let p=line.split(";");
+   if(p.length>=2&&p[0].trim()&&p.slice(1).join(";").trim()){
+     data.push({id:Date.now()+Math.random(),term:p[0].trim(),def:p.slice(1).join(";").trim(),known:false});
+     added++;
+   }
+ });
+ save();
+ $("importText").value="";
+ $("addFeedback").textContent="Импортировано карточек: "+added;
+ renderList();renderCard();stats();
 };
-renderCard();renderList();stats();
+
+renderCard();
+renderList();
+stats();
+renderGame();
 </script>
 </body>
 </html>
