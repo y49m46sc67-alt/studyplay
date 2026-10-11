@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#7565e8">
+<title>StudyPlay</title>
+<style>
+:root{--purple:#7565e8;--bg:#f7f6ff;--ink:#27243b;--muted:#77738d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+header{background:var(--purple);color:white;padding:24px 20px 20px;border-radius:0 0 26px 26px}
+header h1{margin:0;font-size:28px}header p{margin:7px 0 0;opacity:.9}
+main{max-width:620px;margin:auto;padding:18px 15px 40px}
+nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 15px}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:13px 16px}
+nav button{white-space:nowrap;background:white;color:var(--muted)}
+nav button.active,.primary{background:var(--purple);color:white}
+.panel{background:white;border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 4px 20px #30245b0b}
+h2{font-size:20px;margin:0 0 14px}
+small,.muted{color:var(--muted)}
+.flash{min-height:220px;border:2px solid #e8e4ff;border-radius:20px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:25px;font-weight:650;overflow-wrap:anywhere}
+.actions{display:flex;gap:9px;margin-top:14px}.actions button{flex:1}
+.secondary{background:#f0edff;color:var(--purple)}
+input,textarea{width:100%;padding:13px;border:1px solid #dedbea;border-radius:12px;font:inherit;margin:6px 0 12px}
+label{font-size:14px;font-weight:600}
+.option{display:block;width:100%;text-align:left;background:#f5f3ff;margin:9px 0}
+.option:disabled{opacity:1}.correct{background:#d9f8e6!important}.wrong{background:#ffe1e5!important}
+.stat{display:flex;gap:10px}.stat div{flex:1;background:#f5f3ff;border-radius:14px;padding:13px;text-align:center}
+.stat strong{display:block;font-size:23px;color:var(--purple)}
+hr{border:0;border-top:1px solid #eeeaf7;margin:18px 0}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
+</style>
+</head>
+<body>
+<header>
+  <h1>✦ StudyPlay</h1>
+  <p>Учись в своём ритме</p>
+</header>
+<main>
+  <nav>
+    <button class="active" data-tab="cards">Карточки</button>
+    <button data-tab="learn">Обучение</button>
+    <button data-tab="match">Пары</button>
+    <button data-tab="create">Мои слова</button>
+  </nav>
+
+  <section id="cards" class="panel">
+    <h2 id="deckTitle">Английский — основы</h2>
+    <p class="muted" id="counter"></p>
+    <div class="flash" id="flash" role="button" tabindex="0">Нажми, чтобы увидеть перевод</div>
+    <div class="actions">
+      <button class="secondary" id="prev">← Назад</button>
+      <button class="primary" id="flip">Перевернуть</button>
+      <button class="secondary" id="next">Далее →</button>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="shuffle">🔀 Перемешать</button>
+      <button class="secondary" id="known">✓ Знаю</button>
+    </div>
+  </section>
+
+  <section id="learn" class="panel hidden">
+    <h2>Проверь себя</h2>
+    <p id="question"></p>
+    <div id="options"></div>
+    <p id="feedback" aria-live="polite"></p>
+    <button class="primary" id="nextQuestion">Следующий вопрос</button>
+    <p class="muted" id="score"></p>
+  </section>
+
+  <section id="match" class="panel hidden">
+    <h2>Найди пары</h2>
+    <p class="muted">Нажми на слово, затем на его перевод.</p>
+    <div id="pairs"></div>
+    <p id="matchFeedback" aria-live="polite"></p>
+    <button class="primary" id="newMatch">Новая игра</button>
+  </section>
+
+  <section id="create" class="panel hidden">
+    <h2>Добавить карточку</h2>
+    <label for="term">Слово или вопрос</label>
+    <input id="term" placeholder="Например: Apple">
+    <label for="definition">Перевод или ответ</label>
+    <textarea id="definition" rows="2" placeholder="Например: Яблоко"></textarea>
+    <button class="primary" id="add" style="width:100%">＋ Добавить карточку</button>
+    <p id="addFeedback" aria-live="polite"></p>
+    <hr>
+    <h2>Мои карточки</h2>
+    <div id="myCards"></div>
+    <button class="secondary" id="export" style="width:100%">Экспортировать набор</button>
+    <hr>
+    <h2>Импорт карточек</h2>
+    <p class="muted">Вставь пары в формате слово;перевод — по одной паре на строку.</p>
+    <textarea id="importText" rows="4" placeholder="Apple;Яблоко&#10;Book;Книга"></textarea>
+    <button class="secondary" id="import" style="width:100%">Импортировать</button>
+  </section>
+
+  <section class="panel">
+    <h2>Твой прогресс</h2>
+    <div class="stat">
+      <div><strong id="total">0</strong><small>карточек</small></div>
+      <div><strong id="learned">0</strong><small>знаю</small></div>
+      <div><strong id="percent">0%</strong><small>изучено</small></div>
+    </div>
+  </section>
+  <footer>StudyPlay · Твои карточки сохраняются в этом браузере на устройстве.</footer>
+</main>
+<script>
+const starter=[
+ ["Hello","Привет"],["Thank you","Спасибо"],["Book","Книга"],
+ ["Apple","Яблоко"],["Water","Вода"],["Beautiful","Красивый"],
+ ["House","Дом"],["Friend","Друг"]
+];
+let data;
+try{data=JSON.parse(localStorage.getItem("studyplay-cards"))||starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}))}
+catch(e){data=starter.map((x,i)=>({id:i+1,term:x[0],def:x[1],known:false}))}
+let index=0,flipped=false,order=[],qi=0,score=0,answered=false,selected=null,matched=new Set();
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem("studyplay-cards",JSON.stringify(data))}catch(e){}}
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function stats(){$("total").textContent=data.length;$("learned").textContent=data.filter(x=>x.known).length;$("percent").textContent=data.length?Math.round(data.filter(x=>x.known).length/data.length*100)+"%":"0%"}
+function renderCard(){
+ if(!data.length){$("flash").textContent="Добавь свою первую карточку";$("counter").textContent="0 карточек";return}
+ index=(index+data.length)%data.length;
+ $("deckTitle").textContent="Мой набор";
+ $("counter").textContent=`Карточка ${index+1} из ${data.length}`;
+ $("flash").textContent=flipped?data[index].def:data[index].term;
+ $("known").textContent=data[index].known?"✓ Уже знаю":"✓ Знаю";
+ stats()
+}
+function tab(name){
+ document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
+ $(name).classList.remove("hidden");
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+ if(name==="cards")renderCard();if(name==="learn")question();if(name==="match")newMatch();if(name==="create")renderList()
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+$("flash").onclick=$("flip").onclick=()=>{flipped=!flipped;renderCard()};
+$("flash").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();flipped=!flipped;renderCard()}};
+$("prev").onclick=()=>{index--;flipped=false;renderCard()};
+$("next").onclick=()=>{index++;flipped=false;renderCard()};
+$("shuffle").onclick=()=>{data=shuffle(data);index=0;flipped=false;save();renderCard()};
+$("known").onclick=()=>{if(data[index]){data[index].known=!data[index].known;save();renderCard()}};
+function question(){
+ if(!data.length){$("question").textContent="Сначала добавь карточки.";return}
+ qi=Math.floor(Math.random()*data.length);answered=false;
+ $("question").textContent="Как переводится: "+data[qi].term+"?";
+ $("feedback").textContent="";$("options").innerHTML="";
+ let choices=shuffle([data[qi],...shuffle(data.filter((_,i)=>i!==qi)).slice(0,3)]);
+ choices.forEach(c=>{let b=document.createElement("button");b.className="option";b.textContent=c.def;b.onclick=()=>{
+ if(answered)return;answered=true;
+ if(c.id===data[qi].id){score++;data[qi].known=true;$("feedback").textContent="Верно! 🎉";b.classList.add("correct");save()}
+ else{$("feedback").textContent="Правильный ответ: "+data[qi].def;b.classList.add("wrong")}
+ [...$("options").children].forEach(x=>x.disabled=true);$("score").textContent="Верных ответов: "+score;stats()
+ };$("options").appendChild(b)});
+ if(choices.length===1)$("feedback").textContent="Добавь ещё карточки для разнообразия."
+}
+$("nextQuestion").onclick=question;
+function newMatch(){
+ matched=new Set();selected=null;$("pairs").innerHTML="";$("matchFeedback").textContent="";
+ if(data.length<2){$("matchFeedback").textContent="Добавь хотя бы две карточки.";return}
+ let chosen=shuffle(data).slice(0,Math.min(6,data.length));
+ let tiles=shuffle(chosen.flatMap((c,i)=>[{id:c.id,side:"term",text:c.term},{id:c.id,side:"def",text:c.def}]));
+ tiles.forEach((t,i)=>{let b=document.createElement("button");b.className="option";b.style.width="48%";b.style.display="inline-block";b.style.verticalAlign="top";b.style.margin="1%";b.textContent=t.text;b.onclick=()=>{
+ if(matched.has(t.id+"-"+t.side))return;
+ if(!selected){selected={t,b};b.classList.add("correct");return}
+ if(selected.t.id===t.id&&selected.t.side!==t.side){matched.add(t.id+"-term");matched.add(t.id+"-def");b.classList.add("correct");selected.b.disabled=true;b.disabled=true;selected.b.style.opacity=".45";b.style.opacity=".45";selected=null;
+ if(matched.size===chosen.length*2)$("matchFeedback").textContent="Все пары найдены! Отличная работа 🎉"
+ }else{selected.b.classList.remove("correct");selected=null;$("matchFeedback").textContent="Не совпало — попробуй ещё раз."}
+ };$("pairs").appendChild(b)})
+}
+$("newMatch").onclick=newMatch;
+$("add").onclick=()=>{
+ let term=$("term").value.trim(),def=$("definition").value.trim();
+ if(!term||!def){$("addFeedback").textContent="Заполни оба поля.";return}
+ data.push({id:Date.now()+Math.random(),term,def,known:false});save();
+ $("term").value="";$("definition").value="";$("addFeedback").textContent="Карточка добавлена!";
+ renderList();stats()
+};
+function renderList(){
+ $("myCards").innerHTML="";
+ data.forEach((c,i)=>{let row=document.createElement("div");row.style.cssText="padding:10px 0;border-bottom:1px solid #eeeaf7";
+ let t=document.createElement("strong");t.textContent=c.term+" — ";
+ let d=document.createElement("span");d.textContent=c.def+" ";
+ let del=document.createElement("button");del.textContent="Удалить";del.className="secondary";del.style.padding="7px 10px";del.onclick=()=>{data.splice(i,1);index=0;save();renderList();renderCard();stats()};
+ row.append(t,d,del);$("myCards").appendChild(row)
+ })
+}
+$("export").onclick=()=>{
+ let blob=new Blob([data.map(c=>c.term+";"+c.def).join("\n")],{type:"text/plain;charset=utf-8"});
+ let url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="studyplay-cards.txt";a.click();URL.revokeObjectURL(url)
+};
+$("import").onclick=()=>{
+ let lines=$("importText").value.split(/\r?\n/),added=0;
+ lines.forEach(line=>{let p=line.split(";");if(p.length>=2&&p[0].trim()&&p.slice(1).join(";").trim()){data.push({id:Date.now()+Math.random(),term:p[0].trim(),def:p.slice(1).join(";").trim(),known:false});added++}});
+ save();$("importText").value="";$("addFeedback").textContent="Импортировано карточек: "+added;renderList();renderCard();stats()
+};
+renderCard();renderList();stats();
+</script>
+</body>
+</html>
